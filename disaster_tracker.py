@@ -8,75 +8,108 @@ Original file is located at
 """
 
 import json
+import pandas as pd
 from datetime import datetime
+from sklearn.tree import DecisionTreeClassifier # 🚀 Import ML Classifier
 
-# 🌟 THE OFFLINE FIX: We build a simulated live JSON telemetry stream right into Python.
-# This mimics the exact format sent out by real government disaster networks.
+# --------------------------------------------------------------------------
+# STEP 1: HISTORICAL TRAINING DATASET
+# --------------------------------------------------------------------------
+# We create a historical training set to teach the ML model which
+# combinations of climate parameters trigger specific emergency tiers.
+# Features: [Wind_Speed_MPH, Rainfall_Inches, Pressure_Drop_hPa]
+# Labels: 0 = Low Risk, 1 = Moderate Alert, 2 = Critical Emergency
+historical_weather_data = [
+    [10, 0.1, 2],    # 0 (Low Risk)
+    [15, 0.4, 5],    # 0 (Low Risk)
+    [35, 1.2, 12],   # 1 (Moderate Alert)
+    [40, 1.5, 15],   # 1 (Moderate Alert)
+    [65, 3.5, 28],   # 2 (Critical Emergency)
+    [75, 4.2, 35],   # 2 (Critical Emergency)
+    [12, 0.2, 1],    # 0 (Low Risk)
+    [38, 1.8, 18],   # 1 (Moderate Alert)
+    [80, 5.0, 40]    # 2 (Critical Emergency)
+]
+hazard_labels = [0, 0, 1, 1, 2, 2, 0, 1, 2]
+
+print("Training Supervised Machine Learning Decision Tree Classifier...")
+# Initialize and train the machine learning classification engine
+classifier_model = DecisionTreeClassifier(random_state=42)
+classifier_model.fit(historical_weather_data, hazard_labels)
+print("✅ Classifier model successfully compiled and active.\n")
+
+# --------------------------------------------------------------------------
+# STEP 2: SIMULATED LIVE STREAM REGISTRY (MOCK JSON INPUT)
+# --------------------------------------------------------------------------
+# This acts as our real-time feed, containing the raw physical features
+# that our model will read and classify on the fly.
 mock_live_feed = """
 {
     "status": "Success",
     "region": "Georgia, USA",
-    "timestamp": "2026-06-18T14:20:00",
     "features": [
         {
-            "event_id": "GA-001",
-            "type": "Severe Weather Anomaly",
-            "hazard": "Flash Flood Emergency",
-            "severity_index": 8.4,
-            "affected_zones": "Fulton County, DeKalb County, Cobb County",
-            "details": "Rapid rainfall exceeding 3 inches per hour. Damaging flash floods actively reported over low-lying highway matrices."
+            "event_id": "GA-701",
+            "location": "Fulton County Matrix",
+            "wind_speed_mph": 14.5,
+            "rainfall_inches": 3.8,
+            "pressure_drop_hPa": 31.2,
+            "log": "Extreme localized precipitative system forming rapidly."
         },
         {
-            "event_id": "GA-002",
-            "type": "Geological Shift Anomaly",
-            "hazard": "Minor Seismic Tremor",
-            "severity_index": 2.1,
-            "affected_zones": "Northwest Georgia Border Region",
-            "details": "Low-level micro-earthquake registered by deep geological telemetry arrays. No structural impacts reported."
+            "event_id": "GA-702",
+            "location": "Macon Regional Core",
+            "wind_speed_mph": 12.0,
+            "rainfall_inches": 0.1,
+            "pressure_drop_hPa": 1.5,
+            "log": "Standard clear weather baseline conditions observed."
         },
         {
-            "event_id": "GA-003",
-            "type": "Atmospheric Danger Anomaly",
-            "hazard": "Severe Thunderstorm & High Velocity Winds",
-            "severity_index": 7.9,
-            "affected_zones": "Savannah Coastline, Chatham County",
-            "details": "Radar arrays indicating severe wind velocities tracking over 60 mph with extreme cloud-to-ground lightning clusters."
+            "event_id": "GA-703",
+            "location": "Savannah Coastline Grid",
+            "wind_speed_mph": 42.1,
+            "rainfall_inches": 1.4,
+            "pressure_drop_hPa": 16.8,
+            "log": "High-velocity atmospheric front pushing landward."
         }
     ]
 }
 """
 
-print("📡 Initializing Offline Public Safety Tracker System Baseline...")
-print("📦 Safely unpacking simulated live regional data streams...")
-
-# Unpack the simulated data stream safely without needing any network hardware
+# --------------------------------------------------------------------------
+# STEP 3: PREDICTION & CLASSIFICATION PIPELINE
+# --------------------------------------------------------------------------
 data = json.loads(mock_live_feed)
 events = data.get('features', [])
 
-print(f"✅ Success! Unpacked {len(events)} live localized hazard logs.")
-print("🔍 Analyzing metric thresholds for critical emergency alerts...")
+print("Processing live data parameters through ML classification framework...")
 print("-" * 75)
 
-alert_count = 0
+# Mapping our numeric label indices back to readable professional tags
+risk_tiers = {
+    0: "🟢 LOW RISK SYSTEM (Baseline Monitoring Only)",
+    1: "🟡 MODERATE ALERT (Regional Safety Advisories Active)",
+    2: "🚨 CRITICAL EMERGENCY (Immediate Evacuation Protocols Triggered)"
+}
+
 for event in events:
-    event_type = event.get('type')
-    hazard = event.get('hazard')
-    severity = event.get('severity_index')
-    zones = event.get('affected_zones')
-    details = event.get('details')
+    location = event.get('location')
+    wind = event.get('wind_speed_mph')
+    rain = event.get('rainfall_inches')
+    pressure = event.get('pressure_drop_hPa')
+    log = event.get('log')
 
-    # 🧠 Logic Processing Layer: Track index safety boundaries
-    # We flag any hazard with a severity index higher than 5.0 as a critical threat
-    if severity >= 5.0:
-        alert_count += 1
+    # Bundle the current streaming features into a 2D array matrix for the model
+    current_features = [[wind, rain, pressure]]
 
-        print(f"🚨 CRITICAL REGIONAL EMERGENCY FLAG #{alert_count}")
-        print(f"   🔹 Anomaly Category: {event_type}")
-        print(f"   🔹 Specific Hazard:   {hazard}")
-        print(f"   🔹 Threat Intensity:  {severity} / 10.0 Priority Index")
-        print(f"   🔹 Affected Sectors:  {zones}")
-        print(f"   📝 Incident Log:      {details}")
-        print("-" * 75)
+    # Use our trained model to classify the active threat tier
+    predicted_class = int(classifier_model.predict(current_features)[0])
+    risk_status = risk_tiers[predicted_class]
 
-if alert_count == 0:
-    print("✅ Baseline Stable: All parameters falling within standard index safety boundaries.")
+    # Output the structural log analysis
+    print(f"🆔 EVENT TRACKER: {event.get('event_id')}")
+    print(f"   Sector Location: {location}")
+    print(f"   Live Telemetry:   {wind} MPH Wind | {rain}\" Rain | {pressure} hPa Drop")
+    print(f"   ML Predicted Tier: {risk_status}")
+    print(f"   Incident Log:     {log}")
+    print("-" * 75)
